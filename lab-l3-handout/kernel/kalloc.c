@@ -11,6 +11,8 @@
 
 uint64 MAX_PAGES = 0;
 uint64 FREE_PAGES = 0;
+uint8 refCount[PHYSTOP / PGSIZE] = {0}; 
+
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -45,6 +47,18 @@ void freerange(void *pa_start, void *pa_end)
     }
 }
 
+// increment page reference count
+void pageIncrement(void *pa)
+{
+    uint64 page = (uint64)pa / PGSIZE;
+    refCount[page]++;
+}
+
+// decrement page reference count
+void pageDecrement(uint64 address){
+    refCount[address]--;
+}
+
 // Free the page of physical memory pointed at by pa,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
@@ -55,11 +69,18 @@ void kfree(void *pa)
         assert(FREE_PAGES < MAX_PAGES);
     struct run *r;
 
+    uint64 page = (uint64)pa / PGSIZE;
+    uint8 references = refCount[page];
+    if (references > 1) {
+        pageDecrement(page);
+        return;
+    }
+    else if (references == 1) {
+        pageDecrement(page);
+    }
+
     if (((uint64)pa % PGSIZE) != 0 || (char *)pa < end || (uint64)pa >= PHYSTOP)
         panic("kfree");
-
-    // Fill with junk to catch dangling refs.
-    memset(pa, 1, PGSIZE);
 
     r = (struct run *)pa;
 
@@ -88,5 +109,13 @@ kalloc(void)
     if (r)
         memset((char *)r, 5, PGSIZE); // fill with junk
     FREE_PAGES--;
+
+    uint64 uint_r = (uint64)r;
+    uint64 page = uint_r / PGSIZE;
+
+    if (refCount[page] > 0){
+        panic("vfork_kalloc: allocating already allocated page:(");
+    }
+    refCount[page]++;
     return (void *)r;
 }

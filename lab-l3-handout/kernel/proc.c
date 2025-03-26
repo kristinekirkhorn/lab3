@@ -373,6 +373,8 @@ int growproc(int n)
 
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
+
+// vfork
 int fork(void)
 {
     int i, pid;
@@ -386,7 +388,7 @@ int fork(void)
     }
 
     // Copy user memory from parent to child.
-    if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0)
+    if (uvmcopy_cow(p->pagetable, np->pagetable, p->sz) < 0)
     {
         freeproc(np);
         release(&np->lock);

@@ -29,6 +29,34 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+// trap catching copy instruction
+void copy_trap(struct proc *p)
+{
+  uint64 va = r_stval();
+  pagetable_t pagetable = p->pagetable;
+  pte_t *pte = walk(pagetable, va, 0);
+  
+  uint64 pa;
+  char *mem;
+
+  if (pte != 0 && (*pte & PTE_V) != 0)
+  {
+    pa = PTE2PA(*pte);
+    if ((mem = kalloc()) == 0) // Allocate new page for process
+    {
+      printf("Something went wrong during kalloc\n");
+    }
+    *pte &= ~PTE_V;
+    memmove(mem, (char *)pa, PGSIZE); // Copy data from page to new page
+    if (mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, PTE_FLAGS(*pte) | PTE_W) != 0)
+    {
+      panic("copy_trap: fail in mappages");
+    }
+    kfree((void *)pa); // Dellocate one process from page
+  }
+}
+
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -67,7 +95,12 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  }
+  //handling scause error
+  else if (r_scause() == 15){
+    copy_trap(p);
+  }
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
