@@ -836,3 +836,16 @@ void schedset(int id)
     sched_pointer = available_schedulers[id].impl;
     printf("Scheduler successfully changed to %s\n", available_schedulers[id].name);
 }
+
+// handles two inputs
+struct proc *
+allocProc(int number){
+    struct proc *p;
+    for (p = proc; p < &proc[NPROC]; p++){
+        if (p->pid == number){
+            return p;
+        }
+    }
+    return 0;
+
+} 

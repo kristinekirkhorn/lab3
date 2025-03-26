@@ -119,6 +119,7 @@ void procdump(void);
 struct user_proc *ps(uint8 start, uint8 count);
 void schedls(void);
 void schedset(int id);
+struct proc * allocProc(int number);
 
 // swtch.S
 void swtch(struct context *, struct context *);

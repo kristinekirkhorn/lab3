@@ -119,8 +119,25 @@ uint64 sys_schedset(void)
 
 uint64 sys_va2pa(void)
 {
-    printf("TODO: IMPLEMENT ME [%s@%s (line %d)]", __func__, __FILE__, __LINE__);
-    return 0;
+    int address = 0;
+    argint(0, &address);
+    pagetable_t pagetable;
+    
+    int pid = 0;
+    argint(1, &pid);
+
+    if (pid == -1) {
+        pagetable = myproc()-> pagetable;
+    }
+    else {
+        // two inputs
+        if (allocProc(pid) == 0) {
+            return 0;
+        }
+        pagetable = allocProc(pid)-> pagetable;
+    }
+
+    return walkaddr(pagetable, address);
 }
 
 uint64 sys_pfreepages(void)
